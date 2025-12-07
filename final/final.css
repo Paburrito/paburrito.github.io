@@ -37,7 +37,7 @@
 
 .xbox .trigger.right {
     float: right;
-    transform: rotateY(180deg);
+    /* transform: rotateY(180deg); */
     background: url(triggerR.png);
 }
 
@@ -259,5 +259,6 @@
 .xbox {
     background: no-repeat center;
 }
+
 
 /*END Xbox One Controller Styling*/
