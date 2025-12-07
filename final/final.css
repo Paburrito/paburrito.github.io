@@ -37,7 +37,7 @@
 
 .xbox .trigger.right {
     float: right;
-    /* transform: rotateY(180deg); */
+    transform: rotateY(180deg);
     background: url(triggerR.png);
 }
 
