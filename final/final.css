@@ -25,18 +25,20 @@
 .xbox .trigger {
     width: 88px;
     height: 121px;
-    background: url(trigger.png);
+    /* background: url(trigger.png); */
     opacity: 0;
 }
 
 .xbox .trigger.left {
     float: left;
     background-position: 0 0;
+    background: url(triggerL.png);
 }
 
 .xbox .trigger.right {
     float: right;
-    transform: rotateY(180deg);
+    /* transform: rotateY(180deg); */
+    background: url(triggerR.png);
 }
 
 .xbox .bumper {
@@ -184,7 +186,7 @@
     background: url(stick.png);
     background-position: -85px 0;
     height: 83px;
-    width: 84px;
+    width: 83px;
 }
 
 .xbox .stick.pressed {
