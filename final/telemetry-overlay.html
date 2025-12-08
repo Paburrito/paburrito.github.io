@@ -37,9 +37,8 @@
             transform: translateX(-50%);
             border-radius: 8px;
             background: linear-gradient(to bottom, 
-                transparent 0%,
-                hsla(209, 26%, 41%, 0.4) 80%,
-                hsla(209, 26%, 41%, 0.6) 100%);
+                hsla(203, 100%, 8%, 0.7) 0%,
+                hsla(203, 100%, 8%, 0.90) 100%);
         }
 
         .telemetry-container.bottom {
@@ -55,14 +54,14 @@
 
         .legend {
             position: absolute;
-            top: 6px;
-            left: 50px;
+            top: -25px;
+            left: 7px;
             display: flex;
             gap: 16px;
-            font-size: 11px;
+            font-size: 23px;
             color: #fff;
             font-family: 'Rajdhani', -apple-system, sans-serif;
-            font-weight: 700;
+            font-weight: 100;
             letter-spacing: 0.3px;
             z-index: 10;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
@@ -89,12 +88,12 @@
         }
 
         .grid-line.major {
-            height: 2px;
+            height: 4px;
             background: rgba(255, 255, 255, 0.12);
         }
 
         .grid-line.minor {
-            height: 1px;
+            height: 2px;
         }
 
         .labels {
@@ -122,20 +121,24 @@
 </head>
 <body>
     <div class="telemetry-container" id="container">
-        <!-- <div class="legend">
+        <div class="legend">
             <div class="legend-item">
-                <div class="legend-dot" style="background: #b00202; color: #b00202;"></div>
+                <div class="legend-dot" style="background: #ff0000; color: #ff0000;"></div>
                 <span>Brake</span>
             </div>
             <div class="legend-item">
                 <div class="legend-dot" style="background: #22c55e; color: #22c55e;"></div>
                 <span>Throttle</span>
             </div>
-        </div> -->
+            <div class="legend-item">
+                <div class="legend-dot" style="background: #e0e0e0; color: #e0e0e0;"></div>
+                <span>Clutch</span>
+            </div>
+        </div>
         <div class="grid-line major" style="top: 0%;"></div>
         <div class="grid-line minor" style="top: 20%;"></div>
         <div class="grid-line minor" style="top: 40%;"></div>
-        <div class="grid-line major" style="top: 50%;"></div>
+        <!-- <div class="grid-line minor" style="top: 50%;"></div> -->
         <div class="grid-line minor" style="top: 60%;"></div>
         <div class="grid-line minor" style="top: 80%;"></div>
         <div class="grid-line major" style="bottom: 0%;"></div>
@@ -162,6 +165,7 @@
         const HISTORY_LENGTH = 150;
         const leftHistory = new Array(HISTORY_LENGTH).fill(0);
         const rightHistory = new Array(HISTORY_LENGTH).fill(0);
+        const clutchHistory = new Array(HISTORY_LENGTH).fill(0);
 
         function update() {
             const gamepads = navigator.getGamepads();
@@ -170,7 +174,10 @@
             if (gamepad) {
                 const leftTrigger = gamepad.buttons[6]?.value || 0;
                 const rightTrigger = gamepad.buttons[7]?.value || 0;
+                const clutch = gamepad.buttons[4]?.value || 0; // LB = clutch
 
+                clutchHistory.push(clutch);
+                clutchHistory.shift();
                 leftHistory.push(leftTrigger);
                 leftHistory.shift();
                 rightHistory.push(rightTrigger);
@@ -191,12 +198,27 @@
 
             ctx.clearRect(0, 0, width, height);
 
-            // Left trigger (blue - brake)
+            // Clutch (left bumper)
             ctx.beginPath();
-            ctx.strokeStyle = '#b00202';
-            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = '#e0e0e0';
+
+            for (let i = 0; i < clutchHistory.length; i++) {
+                const x = padding + (i / clutchHistory.length) * graphWidth;
+                const y = height - padding - (clutchHistory[i] * graphHeight);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Left trigger - Brake
+            ctx.beginPath();
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 5;
             ctx.shadowBlur = 10;
-            ctx.shadowColor = '#b00202';
+            ctx.shadowColor = '#ff0000';
 
             for (let i = 0; i < leftHistory.length; i++) {
                 const x = padding + (i / leftHistory.length) * graphWidth;
@@ -206,10 +228,10 @@
             ctx.stroke();
             ctx.shadowBlur = 0;
 
-            // Right trigger (green - throttle)
+            // Right trigger - Throttle
             ctx.beginPath();
             ctx.strokeStyle = '#22c55e';
-            ctx.lineWidth = 2.5;
+            ctx.lineWidth = 5;
             ctx.shadowBlur = 10;
             ctx.shadowColor = '#22c55e';
 
@@ -220,6 +242,8 @@
             }
             ctx.stroke();
             ctx.shadowBlur = 0;
+
+            
         }
 
         update();
