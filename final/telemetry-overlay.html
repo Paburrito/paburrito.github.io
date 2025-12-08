@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telemetry Overlay</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            /* background: transparent; */
+            background: rgb(80, 80, 80); /* Only there for now while i test, white bg is too arresting for my eyes */
+            overflow: hidden;
+        }
+
+        .telemetry-container {
+            position: absolute;
+            width: 420px;
+            height: 120px;
+            /* border: 2px solid rgba(255, 255, 255, 0.15); */
+            box-shadow: 
+                inset 0 2px 8px rgba(0, 0, 0, 0.4),
+                0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        .telemetry-container.top {
+            top: 50px;
+            left: 50%;
+            width: 290px;
+            transform: translateX(-50%);
+            border-radius: 8px;
+            background: linear-gradient(to bottom, 
+                transparent 0%,
+                hsla(209, 26%, 41%, 0.4) 80%,
+                hsla(209, 26%, 41%, 0.6) 100%);
+        }
+
+        .telemetry-container.bottom {
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 60px 60px 20px 20px;
+            background: linear-gradient(to bottom, 
+                transparent 0%,
+                hsla(209, 26%, 35%, 0.92) 50%,
+                hsla(209, 26%, 41%, 0.65) 100%);
+        }
+
+        .legend {
+            position: absolute;
+            top: 6px;
+            left: 50px;
+            display: flex;
+            gap: 16px;
+            font-size: 11px;
+            color: #fff;
+            font-family: 'Rajdhani', -apple-system, sans-serif;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            z-index: 10;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            box-shadow: 0 0 6px currentColor;
+        }
+
+        .grid-line {
+            position: absolute;
+            left: 5px;
+            right: 5px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .grid-line.major {
+            height: 2px;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .grid-line.minor {
+            height: 1px;
+        }
+
+        .labels {
+            position: absolute;
+            right: 8px;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px 0;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            font-family: 'Rajdhani', monospace;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="telemetry-container" id="container">
+        <!-- <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot" style="background: #b00202; color: #b00202;"></div>
+                <span>Brake</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background: #22c55e; color: #22c55e;"></div>
+                <span>Throttle</span>
+            </div>
+        </div> -->
+        <div class="grid-line major" style="top: 0%;"></div>
+        <div class="grid-line minor" style="top: 20%;"></div>
+        <div class="grid-line minor" style="top: 40%;"></div>
+        <!-- <div class="grid-line minor" style="top: 50%;"></div> -->
+        <div class="grid-line minor" style="top: 60%;"></div>
+        <div class="grid-line minor" style="top: 80%;"></div>
+        <div class="grid-line major" style="bottom: 0%;"></div>
+        <!-- <div class="labels">
+            <span>100</span>
+            <span>80</span>
+            <span>60</span>
+            <span>50</span>
+            <span>40</span>
+            <span>20</span>
+            <span>0</span>
+        </div> -->
+        <canvas id="canvas" width="420" height="120"></canvas>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const position = params.get('position') || 'top';
+        document.getElementById('container').classList.add(position);
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        const HISTORY_LENGTH = 150;
+        const leftHistory = new Array(HISTORY_LENGTH).fill(0);
+        const rightHistory = new Array(HISTORY_LENGTH).fill(0);
+
+        function update() {
+            const gamepads = navigator.getGamepads();
+            const gamepad = gamepads[0] || gamepads[1] || gamepads[2] || gamepads[3];
+
+            if (gamepad) {
+                const leftTrigger = gamepad.buttons[6]?.value || 0;
+                const rightTrigger = gamepad.buttons[7]?.value || 0;
+
+                leftHistory.push(leftTrigger);
+                leftHistory.shift();
+                rightHistory.push(rightTrigger);
+                rightHistory.shift();
+
+                draw();
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        function draw() {
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 0;
+            const graphHeight = height - padding * 2;
+            const graphWidth = width - padding * 2;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Left trigger (blue - brake)
+            ctx.beginPath();
+            ctx.strokeStyle = '#b00202';
+            ctx.lineWidth = 2.5;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#b00202';
+
+            for (let i = 0; i < leftHistory.length; i++) {
+                const x = padding + (i / leftHistory.length) * graphWidth;
+                const y = height - padding - (leftHistory[i] * graphHeight);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Right trigger (green - throttle)
+            ctx.beginPath();
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 2.5;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#22c55e';
+
+            for (let i = 0; i < rightHistory.length; i++) {
+                const x = padding + (i / rightHistory.length) * graphWidth;
+                const y = height - padding - (rightHistory[i] * graphHeight);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        update();
+    </script>
+</body>
+</html>
